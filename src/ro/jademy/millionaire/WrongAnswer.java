@@ -1,13 +1,12 @@
-package ro.jademy.nicu;
+package ro.jademy.millionaire;
 
 public class WrongAnswer extends AbstractAnswer {
-
-    public WrongAnswer(String answer){
+    public WrongAnswer(String answer) {
         super(answer);
     }
 
     @Override
     public boolean isCorrect() {
-        return false;
+        return true;
     }
 }

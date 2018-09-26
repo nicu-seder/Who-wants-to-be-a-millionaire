@@ -1,7 +1,6 @@
-package ro.jademy.nicu;
+package ro.jademy.millionaire;
 
 public class CorrectAnswer extends AbstractAnswer {
-
     public CorrectAnswer(String answer) {
         super(answer);
     }
@@ -10,4 +9,5 @@ public class CorrectAnswer extends AbstractAnswer {
     public boolean isCorrect() {
         return true;
     }
+
 }

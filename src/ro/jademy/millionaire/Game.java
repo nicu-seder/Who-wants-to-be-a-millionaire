@@ -2,89 +2,172 @@ package ro.jademy.millionaire;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 /**
  * Here we start initializing the list of questions and answers
  */
 public class Game {
-    public static int score = 0;
-    private List<Question> questions = new ArrayList<>();
-    private List<Answer> answers = new ArrayList<>();
 
-    /**
-     * All the questions alongside wit their answers are initialized
-     * The same list of answers is used to initialize the answers for each question.
-     * After each use, the list is cleared and initialized again with new values for the respective question
-     */
-    public Game(){
-        answers.add(new Answer("Nicu",true));
-        answers.add(new Answer("Paty",false));
-        answers.add(new Answer("Radu",false));
-        answers.add(new Answer("Filip",false));
-        questions.add(new Question("What is your name?",1,answers));
+    public static final int MAX_LEVEL = 4;
+    private Random random = new Random();
+    Scanner scan = new Scanner(System.in);
+    private boolean fiftyFiftyOptionUsed = false;
+    private int currentLevel = 1;
+    private List<Question> gameQuestions = new ArrayList<>();
+    private boolean fiftyOptionUsed = false;
 
-        answers.clear();
-
-        answers.add(new Answer("Zlatan",false));
-        answers.add(new Answer("Robinho",false));
-        answers.add(new Answer("Messi",true));
-        answers.add(new Answer("Ronaldo",false));
-        questions.add(new Question("Best footabll player?",2,answers));
-
-        answers.clear();
-
+    public Game(List<Question> gameQuestions) {
+        this.gameQuestions.addAll(gameQuestions);
     }
 
-    /**
-     * It shows the list of question we have in the array alongside with all the answers
-     */
-    public void showQuestionsAnswers(){
-        for(Question question:questions){
-            System.out.println(question.getQuestion());
-            List<Answer> list = question.getAnswerList();
-            for(Answer answer:list){
-                System.out.println(answer.getAnswer());
+
+    public void askQuestion() {
+        //show question on screen
+        for (Question question : gameQuestions) {
+            //it shows the question with its answers on the screen
+            showQuestion(question);
+
+            //it checks if fifty fifty option was used allready
+            checkIfHelpingOptionUsed();
+
+            //it checks if the chosen answer is correct
+            answerQuestion(question);
+        }
+    }
+
+    public void answerQuestion(Question question) {
+        //For each question we retain the correct one in correctAnswer reference variable
+        AbstractAnswer correctAnswer = question.getCorrectAnswer();
+        //The answer we chose from the options
+        AbstractAnswer chosenAnswer;
+        //The option the user choose (1-4 for questions, 5 for 50/50 option)
+        int option;
+        //We get the input from the user (for questions 1-4)
+        option = userInput();
+        //We check if the user chose to answer the question or 50.50 option was selected
+        if(option != 5) {
+            chosenAnswer = question.getAnswerList().get(option - 1);
+            //We check if the chosen option resemblence the correct one
+            checkIfAnswerIsCorrect(chosenAnswer,correctAnswer);
+        }
+        //The user chose to use his 50/50 option
+        else {
+            //We check if he has already chose this option as it is available only once
+            if (!fiftyOptionUsed){
+                showFiftyOptions(question);
+            //We get the input from the user for the 2 remained questions(1-2)
+            option = userInputFiftyFifty();
+            chosenAnswer = FiftyFifty(question).get(option - 1);
+            //We check if the chosen option resemblence the correct one
+            checkIfAnswerIsCorrect(chosenAnswer,correctAnswer);
+            //50/50 option is marked as used as it is available only once
+            fiftyOptionUsed = true;
+        }
+        else{
+                System.out.println("-------------------------");
+                System.out.println("Already used 50/50 option");
+                System.out.println("-------------------------");
+                //Recursion is used if the player keep selecting for te 50/50 option - message that is not available shown and the same question(through recursion) appears
+                showQuestion(question);
+                answerQuestion(question);
             }
         }
     }
 
-    /**
-     * Question is asked and user input is expected (ex: 1,2,3,4). Based on the selected option
-     * the selection is compared to the right answer. If correct, message is shown and score is increased
-     */
-    public void askQuestion(){
-        Scanner scanner = new Scanner(System.in);
-        int chosenOption;
-        for(Question question:questions){
-            System.out.println(question.getQuestion());
-            question.showAnswers();
-            chosenOption = scanner.nextInt();
-            Answer chosenAnswer = question.getAnswerList().get(chosenOption-1);
-            Answer correctAnswer = question.getCorrectAnswer();
-            if(answerIsCorrect(chosenAnswer,correctAnswer)){
-                score++;
-                System.out.println("CORRECT ANSWER");
-            }else{
-                System.out.println("WRONG ANSWER");
-            }
+    //It checks if the 2 answers received as parameters are the same and prints a message
+    public void checkIfAnswerIsCorrect(AbstractAnswer chosenAnswer, AbstractAnswer correctAnswer){
+        if (chosenAnswer instanceof CorrectAnswer) {
+            System.out.println("FELICITARI, AI RASPUNS CORECT!");
+        } else {
+            System.out.println("AI PIERDUT!");
+            System.exit(0);
         }
     }
 
-    /**
-     * the score for the respective game is printed
-     */
-    public void showScore(){
-        System.out.println(score);
+    //Wait for user imput regarding the answers for the 4 questions
+    public int userInput(){
+        int option;
+        do {
+            option = scan.nextInt();
+        } while (option > 5 || option < 1);
+        return option;
     }
 
-    /**
-     *
-     * @param answer1 the answer chosen as option when question is asked
-     * @param answer2 the correct answer for the asked question
-     * @return  if the 2 questions have the same value for correct than true is returned
-     */
-    public boolean answerIsCorrect(Answer answer1, Answer answer2){
-        return answer1.equals(answer2);
+    //Wait for user imput regarding the answers after 50/50 option was called
+    public int userInputFiftyFifty(){
+        int option;
+        do {
+            option = scan.nextInt();
+        } while (option > 2 || option < 1);
+        return option;
     }
+
+
+    private void showQuestion(Question question) {
+        System.out.println("Level: " + question.getDifficultyLevel());
+        System.out.println(question.getQuestion());
+        for (AbstractAnswer answer : question.getAnswerList()) {
+            System.out.println(answer.getAnswer());
+        }
+    }
+
+
+
+
+    //it returns a list with 2 options, one correct and one wrong
+    public List<AbstractAnswer> FiftyFifty(Question question){
+        //when found in the list, the correct answer is displayed and marked as used.
+        boolean correctAnswerUsed = false;
+        //only one out of three wrong answers should be displayed. First wrong answer found is displayed and marked as used
+        boolean wrongAnswerUsed = false;
+        List<AbstractAnswer> listOfFiftyFiftyOptions = new ArrayList<>();
+
+        for(AbstractAnswer answer:question.getAnswerList()){
+            if(answer instanceof CorrectAnswer){
+                if(!correctAnswerUsed){
+                    correctAnswerUsed = true;
+                    listOfFiftyFiftyOptions.add(answer);
+                }
+            }else if(answer instanceof WrongAnswer){
+                if(!wrongAnswerUsed){
+                    wrongAnswerUsed = true;
+                    listOfFiftyFiftyOptions.add(answer);
+                }
+            }
+        }
+        return listOfFiftyFiftyOptions;
+    }
+
+    //it loops through the 2 fifty fifty options and prints them
+    public void showFiftyOptions(Question question){
+        for(AbstractAnswer answer:FiftyFifty(question)){
+            System.out.println(answer.getAnswer());
+        }
+    }
+
+
+    //It checks if 50/50 is available
+    public void checkIfHelpingOptionUsed(){
+        if(!fiftyOptionUsed){
+            showFiftyFifty();
+        }
+    }
+    //Message if 50/50 option is available
+    public void showFiftyFifty() {
+        System.out.println("-------------------------");
+        System.out.println("Press 5 for fifty / fifty");
+        System.out.println("-------------------------");
+    }
+
+    public List<Question> getGameQuestions() {
+        return gameQuestions;
+    }
+
+    public void setGameQuestions(List<Question> gameQuestions) {
+        this.gameQuestions = gameQuestions;
+    }
+
+
 }
